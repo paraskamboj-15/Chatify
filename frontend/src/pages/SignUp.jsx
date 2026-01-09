@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { setAuthUser } from '../redux/authSlice';
 import toast from 'react-hot-toast';
 import { BASE_URL } from '../utils/config';
+import axios from 'axios';
 
 const SignUp = () => {
     const [inputs, setInputs] = useState({
@@ -21,11 +22,7 @@ const SignUp = () => {
         const val = e.target.value;
         if(val.length < 3) return;
         try {
-            const res = fetch(`${BASE_URL}/api/auth/check-username`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: val })
-            });
-            const data = await res.json();
+            const { data } = await axios.post(`${BASE_URL}/api/auth/check-username`, { username: val });
             if(!data.available) {
                 toast.error("Username taken!");
                 setSuggestions(data.suggestions);
@@ -42,11 +39,7 @@ const SignUp = () => {
         if(password !== confirmPassword) return toast.error("Passwords do not match");
 
         try {
-            const res = await fetch(`${BASE_URL}/api/auth/signup`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(inputs)
-            });
-            const data = await res.json();
+            const { data } = await axios.post(`${BASE_URL}/api/auth/signup`, inputs);
             if (data.error) throw new Error(data.error);
             dispatch(setAuthUser(data));
         } catch (error) { toast.error(error.message); }

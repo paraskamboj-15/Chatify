@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import { setAuthUser } from '../redux/authSlice';
 import toast from 'react-hot-toast';
 import { BASE_URL } from '../utils/config';
+import axios from 'axios';
 
 const Login = () => {
     const [inputs, setInputs] = useState({ username: "", password: "" });
@@ -12,11 +13,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${BASE_URL}/api/auth/login`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(inputs)
-            });
-            const data = await res.json();
+            const { data } = await axios.post(`${BASE_URL}/api/auth/login`, inputs);
             if (data.error) throw new Error(data.error);
             dispatch(setAuthUser(data));
         } catch (error) { toast.error(error.message); }

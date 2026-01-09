@@ -7,6 +7,15 @@ export const sendMessage = async (req, res) => {
         const { message } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
+        let fileUrl = "";
+        let fileType = "text";
+
+        // Handle File Upload (assuming req.file exists via Multer)
+        if (req.file) {
+            const uploadResponse = await cloudinary.uploader.upload(req.file.path);
+            fileUrl = uploadResponse.secure_url;
+            fileType = req.file.mimetype.startsWith("image/") ? "image" : "file";
+        }
 
         let conversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] },
@@ -16,38 +25,31 @@ export const sendMessage = async (req, res) => {
             conversation = await Conversation.create({ participants: [senderId, receiverId] });
         }
 
-        const newMessage = new Message({ senderId, receiverId, message });
+        const newMessage = new Message({
+            senderId,
+            receiverId,
+            message: message || "", // Allow empty text if file exists
+            fileUrl,
+            fileType
+        });
 
         if (newMessage) {
             conversation.messages.push(newMessage._id);
         }
 
-        // Run in parallel
         await Promise.all([conversation.save(), newMessage.save()]);
 
-        // SOCKET IO FUNCTIONALITY
         const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
-            // io.to(<socket_id>).emit() used to send events to specific client
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
 
         res.status(201).json(newMessage);
-    } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+    } catch (error) {
+        console.log("Error in sendMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };
-
-// export const getMessages = async (req, res) => {
-//     try {
-//         const { id: userToChatId } = req.params;
-//         const senderId = req.user._id;
-//         const conversation = await Conversation.findOne({
-//             participants: { $all: [senderId, userToChatId] },
-//         }).populate("messages");
-
-//         if (!conversation) return res.status(200).json([]);
-//         res.status(200).json(conversation.messages);
-//     } catch (error) { res.status(500).json({ error: "Internal server error" }); }
-// };
 
 export const getMessages = async (req, res) => {
     try {
@@ -115,4 +117,23 @@ export const deleteConversation = async (req, res) => {
         }
         res.status(200).json({ message: "Conversation deleted" });
     } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+export const markAsRead = async (req, res) => {
+    try {
+        const { senderId } = req.body; // The person who sent the messages I am reading
+        const readerId = req.user._id;
+
+        await Message.updateMany(
+            { senderId: senderId, receiverId: readerId, readAt: null },
+            { $set: { readAt: new Date() } }
+        );
+        
+        // Notify the sender that I read their messages
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("messagesRead", { by: readerId });
+        }
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ error: "Internal Server Error" }); }
 };

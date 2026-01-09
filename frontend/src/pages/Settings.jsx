@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setAuthUser } from '../redux/authSlice';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { BASE_URL } from '../utils/config';
+import axios from 'axios';
 
 const Settings = () => {
     const { authUser } = useSelector(state => state.auth);
@@ -12,13 +14,9 @@ const Settings = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${BASE_URL}/api/auth/update-profile`, {
-                method: "PUT", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(inputs)
-            });
-            const data = await res.json();
+            const { data } = await axios.put(`${BASE_URL}/api/auth/update-profile`, inputs, { headers: { Authorization: `Bearer ${authUser?.token}` } });
             if(data.error) throw new Error(data.error);
-            dispatch(setAuthUser(data));
+            dispatch(setAuthUser({ ...data, token: authUser?.token }));
             toast.success("Profile Updated Successfully");
         } catch(err) { toast.error(err.message); }
     };

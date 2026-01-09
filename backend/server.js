@@ -3,12 +3,19 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
 import cors from "cors";
+import helmet from "helmet";
 import authRoutes from "./routes/auth.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
 // import connectToMongoDB from "./db/connectToMongoDB.js";
 import { app, server } from "./socket/socket.js";
+
+// import rateLimit from 'express-rate-limit';
+// const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }); // 100 req per 15 min
+// app.use("/api", limiter);
+
+app.use(helmet());
  
 app.use(cors());
 dotenv.config();
