@@ -334,7 +334,7 @@ const MessageContainer = () => {
             className='...' 
             value={messageInput} 
             onChange={handleTyping} // Use the new handler
-            placeholder='Send a message...' 
+            placeholder='Send a message....' 
         />
         {/* <div className="w-full relative">
           <input
